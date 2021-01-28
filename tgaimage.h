@@ -47,14 +47,15 @@ struct TGAColor {
 
 class TGAImage {
 protected:
-    std::vector<std::uint8_t> data;
-    int width;
-    int height;
-    int bytespp;
+   
 
     bool   load_rle_data(std::ifstream &in);
     bool unload_rle_data(std::ofstream &out) const;
 public:
+ std::vector<std::uint8_t> data;
+    int width;
+    int height;
+    int bytespp;
     enum Format { GRAYSCALE=1, RGB=3, RGBA=4 };
 
     TGAImage();

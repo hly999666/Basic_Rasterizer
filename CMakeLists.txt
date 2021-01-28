@@ -18,7 +18,7 @@ endfunction()
 #enable_cxx_compiler_flag_if_supported("-Wextra")
 #enable_cxx_compiler_flag_if_supported("-pedantic")
 enable_cxx_compiler_flag_if_supported("-std=c++14")
-enable_cxx_compiler_flag_if_supported("-O1")
+enable_cxx_compiler_flag_if_supported("-O3")
 enable_cxx_compiler_flag_if_supported("-fopenmp")
 
 #file(GLOB SOURCES *.h *.hpp *.cpp)

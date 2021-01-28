@@ -1,0 +1,1 @@
+./basic_rasterizer_1 ../model/african_head.obj
