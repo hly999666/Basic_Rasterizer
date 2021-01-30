@@ -17,13 +17,14 @@
 #include "geometry.h"
 #include "model.h"
 Model *model = NULL;
-const int nx  = 256;
-const int ny = 256;
+const int nx  = 512;
+const int ny = 512;
 const int width  = nx;
 const int height = ny;
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red   = TGAColor(255, 0,   0,   255);
 const TGAColor green   = TGAColor(0, 255,   0,   255);
+ const Vec3f light_dir(0,0,-1);
 void test_output(TGAImage& fb){
    for(int i=0;i<nx;i++){
     
@@ -70,52 +71,6 @@ void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color) {
 inline void  line(Vec2i v0,Vec2i v1,TGAImage &image, TGAColor color){
     line(v0.x,v0.y,v1.x,v1.y,image,color);
 }
-void drawModelWireframe(Model* _model,TGAImage &image_1){
-      #pragma omp parallel for
-      for (int i=0; i<_model->nfaces(); i++) {
-        std::vector<int> face = _model->face(i);
-        for (int j=0; j<3; j++) {
-            Vec3f v0 = _model->vert(face[j]);
-            Vec3f v1 = _model->vert(face[(j+1)%3]);
-            int x0 = (v0.x+1.)*width/2.;
-            int y0 = (v0.y+1.)*height/2.;
-            int x1 = (v1.x+1.)*width/2.;
-            int y1 = (v1.y+1.)*height/2.;
-            line(x0, y0, x1, y1, image_1, white);
-        }
-    }
-}
-
-void test_tree_map(TGAImage &image_1){
-        using namespace glm;
-        float pd=(double)nx/4.0;
-    vec2 pos_a[4];
-    for(int x=0;x<nx;x++){
-        for(int y=0;y<ny;y++){
-          vec3 p(x,0.0,y);
-          vec2 n = floor( vec2(p.x,p.z)*(1.0f/pd));
-         
-          vec2 f = fract( vec2(p.x,p.z)*(1.0f/pd));
-       
-          vec2 grid_point=step(f,vec2(0.5));
-          int count=0;
-    for( int j=0; j<=1; j++ ){
-       for( int i=0; i<=1; i++ )
-    {  
-        vec2 index=vec2( float(i), float(j) ) ;
-        vec2  g =index -grid_point ;
-        vec2 global= n + g;
-         
-        vec2  r = f-g;
-       pos_a[count]=global;count++;
-    }
-    }
-
-          image_1.set(x,y, TGAColor(255*f.x, 255*f.y, 0, 255)); 
-
-}
-}
-} 
 
 
 Vec3f barycentric(Vec2i *pts, Vec2i P) { 
@@ -148,6 +103,40 @@ void triangle(Vec2i *pts, TGAImage &image, TGAColor color) {
         } 
     } 
 } 
+void drawModelWireframe(Model* _model,TGAImage &image_1){
+      #pragma omp parallel for
+      for (int i=0; i<_model->nfaces(); i++) {
+        std::vector<int> face = _model->face(i);
+        for (int j=0; j<3; j++) {
+            Vec3f v0 = _model->vert(face[j]);
+            Vec3f v1 = _model->vert(face[(j+1)%3]);
+            int x0 = (v0.x+1.)*width/2.;
+            int y0 = (v0.y+1.)*height/2.;
+            int x1 = (v1.x+1.)*width/2.;
+            int y1 = (v1.y+1.)*height/2.;
+            line(x0, y0, x1, y1, image_1, white);
+        }
+    }
+}
+void drawModelFilled(Model* model,TGAImage &image){
+#pragma omp parallel for
+    for (int i=0; i<model->nfaces(); i++) { 
+    std::vector<int> face = model->face(i); 
+    Vec2i screen_coords[3]; 
+    Vec3f world_coords[3]; 
+    for (int j=0; j<3; j++) { 
+        Vec3f v = model->vert(face[j]); 
+        screen_coords[j] = Vec2i((v.x+1.)*width/2., (v.y+1.)*height/2.); 
+        world_coords[j]=v;
+    } 
+     Vec3f n = (world_coords[2]-world_coords[0])^(world_coords[1]-world_coords[0]); 
+    n.normalize(); 
+    float intensity = n*light_dir; 
+    if (intensity>0) { 
+        triangle(screen_coords, image, TGAColor(intensity*255, intensity*255, intensity*255, 255)); 
+    } 
+} 
+}
 
  
 
@@ -160,14 +149,9 @@ int main(int argc, char **argv) {
       
       TGAImage image_1(ny, nx, TGAImage::RGB);
     
-     //drawModelWireframe(model,image_1);
+     drawModelFilled(model,image_1);
 
-Vec2i t0[3] = {Vec2i(10, 70),   Vec2i(50, 160),  Vec2i(70, 80)}; 
-Vec2i t1[3] = {Vec2i(180, 50),  Vec2i(150, 1),   Vec2i(70, 180)}; 
-Vec2i t2[3] = {Vec2i(180, 150), Vec2i(120, 160), Vec2i(130, 180)}; 
-triangle(t0, image_1, red); 
-triangle(t1, image_1, white); 
-triangle(t2, image_1, green);
+ 
 
    //image_1.flip_vertically();
   /* std::vector<vec3> framebuffer;

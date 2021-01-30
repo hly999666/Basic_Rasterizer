@@ -24,7 +24,7 @@ enable_cxx_compiler_flag_if_supported("-fopenmp")
 #file(GLOB SOURCES *.h *.hpp *.cpp)
 find_package(OpenCV REQUIRED)
 find_package(glm REQUIRED)
-
+ 
 file(GLOB SOURCES *.h *.cpp) 
 
 message("${SOURCES}")
@@ -33,3 +33,4 @@ add_executable(basic_rasterizer_1  ${SOURCES})
 
 target_link_libraries(basic_rasterizer_1 ${OpenCV_LIBRARIES})
 target_link_libraries(basic_rasterizer_1 ${glm_LIBRARIES})
+ 
