@@ -41,7 +41,8 @@ template <class t> struct Vec3 {
 	Vec3<t> & normalize(t l=1) { *this = (*this)*(l/norm()); return *this; }
 	template <class > friend std::ostream& operator<<(std::ostream& s, Vec3<t>& v);
 };
-
+typedef Vec3<float> vec3;
+typedef Vec2<float> vec2;
 typedef Vec2<float> Vec2f;
 typedef Vec2<int>   Vec2i;
 typedef Vec3<float> Vec3f;

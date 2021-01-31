@@ -5,10 +5,11 @@
 #include <random>
 #include <string>
 #include <vector>
+#include<memory> 
 #include<thread> 
 #include<atomic> 
 #include <omp.h>
- 
+
 #include <opencv2/opencv.hpp>
 #include <glm/glm.hpp>
 //#include "lib/vec3.hpp"
@@ -21,10 +22,12 @@ const int nx  = 512;
 const int ny = 512;
 const int width  = nx;
 const int height = ny;
+double  zbuffer[width*height];
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red   = TGAColor(255, 0,   0,   255);
 const TGAColor green   = TGAColor(0, 255,   0,   255);
  const Vec3f light_dir(0,0,-1);
+ std::shared_ptr<TGAImage> color_map{new TGAImage()};
 void test_output(TGAImage& fb){
    for(int i=0;i<nx;i++){
     
@@ -81,35 +84,53 @@ Vec3f barycentric(Vec2i *pts, Vec2i P) {
        so `abs(u[2])` < 1 means `u[2]` is 0, that means
        triangle is degenerate, so no pixel should be filled,return rejected case */
     if (std::abs(u[2])<1) return Vec3f(-1,1,1);
-    return Vec3f(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z); 
+    return Vec3f(1.0f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z); 
 } 
  
-void triangle(Vec2i *pts, TGAImage &image, TGAColor color) { 
+void triangle(Vec3f *pts,Vec2f* _uv, TGAImage &image, TGAColor color) { 
     Vec2i bboxmin(image.get_width()-1,  image.get_height()-1); 
     Vec2i bboxmax(0, 0); 
     Vec2i clamp(image.get_width()-1, image.get_height()-1); 
     for (int i=0; i<3; i++) { 
         for (int j=0; j<2; j++) { 
-            bboxmin[j] = std::max(0,        std::min(bboxmin[j], pts[i][j])); 
-            bboxmax[j] = std::min(clamp[j], std::max(bboxmax[j], pts[i][j])); 
+            bboxmin[j] = std::max(0, std::min(bboxmin[j],(int) pts[i][j])); 
+            bboxmax[j] = std::min(clamp[j], std::max(bboxmax[j],(int) pts[i][j])); 
         } 
     } 
-    Vec2i P; 
+    Vec2i _pts[3];
+    for (int i=0; i<3; i++)_pts[i]=Vec2i(pts[i][0],pts[i][1]);
+    Vec2i P; double z=0.0;
     for (P.x=bboxmin.x; P.x<=bboxmax.x; P.x++) { 
         for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) { 
-            Vec3f bc_screen  = barycentric(pts, P); 
+            Vec3f bc_screen  = barycentric(_pts, Vec2i(P.x,P.y)); 
             if (bc_screen.x<0 || bc_screen.y<0 || bc_screen.z<0) continue; 
-            image.set(P.x, P.y, color); 
+              z = 0.0;
+            //compute z
+            vec2 uv;uv.x=0.0;uv.y=0.0;
+            for (int i=0; i<3; i++){
+                z+=(double)pts[i][2]*(double)bc_screen[i];
+                uv.x+=(double)_uv[i][0]*(double)bc_screen[i];
+                uv.y+=(double)_uv[i][1]*(double)bc_screen[i];
+            }
+              if (zbuffer[int(P.x+P.y*width)]<z) {
+                zbuffer[int(P.x+P.y*width)]=z;
+                auto tex_color=color_map->get(uv.x,uv.y);
+                double factor=1.0;
+                factor=((double)color.bgra[0]/255.0);
+                auto filled_color=tex_color*factor;
+                image.set(P.x, P.y,filled_color);
+            } 
+              //image.set(P.x, P.y, color);
         } 
     } 
 } 
 void drawModelWireframe(Model* _model,TGAImage &image_1){
       #pragma omp parallel for
       for (int i=0; i<_model->nfaces(); i++) {
-        std::vector<int> face = _model->face(i);
+       
         for (int j=0; j<3; j++) {
-            Vec3f v0 = _model->vert(face[j]);
-            Vec3f v1 = _model->vert(face[(j+1)%3]);
+            Vec3f v0 = _model->vert(i,j);
+            Vec3f v1 = _model->vert(i,(j+1)%3);
             int x0 = (v0.x+1.)*width/2.;
             int y0 = (v0.y+1.)*height/2.;
             int x1 = (v1.x+1.)*width/2.;
@@ -119,21 +140,23 @@ void drawModelWireframe(Model* _model,TGAImage &image_1){
     }
 }
 void drawModelFilled(Model* model,TGAImage &image){
-#pragma omp parallel for
+   #pragma omp parallel for
     for (int i=0; i<model->nfaces(); i++) { 
-    std::vector<int> face = model->face(i); 
-    Vec2i screen_coords[3]; 
+ 
+    Vec3f screen_coords[3]; 
     Vec3f world_coords[3]; 
+    Vec2f uv[3];
     for (int j=0; j<3; j++) { 
-        Vec3f v = model->vert(face[j]); 
-        screen_coords[j] = Vec2i((v.x+1.)*width/2., (v.y+1.)*height/2.); 
+        Vec3f v =  model->vert(i,j); 
+        screen_coords[j] = Vec3f((v.x+1.)*width/2., (v.y+1.)*height/2.,v.z); 
+        uv[j]= model->uv(i,j);
         world_coords[j]=v;
     } 
      Vec3f n = (world_coords[2]-world_coords[0])^(world_coords[1]-world_coords[0]); 
     n.normalize(); 
     float intensity = n*light_dir; 
     if (intensity>0) { 
-        triangle(screen_coords, image, TGAColor(intensity*255, intensity*255, intensity*255, 255)); 
+        triangle(screen_coords,uv, image, TGAColor(intensity*255, intensity*255, intensity*255, 255)); 
     } 
 } 
 }
@@ -141,14 +164,18 @@ void drawModelFilled(Model* model,TGAImage &image){
  
 
 int main(int argc, char **argv) {
+  
     if (2==argc) {
         model = new Model(argv[1]);
     } else {
         model = new Model("./model/african_head.obj");
-    }
-      
+    } 
+ 
+      color_map->read_tga_file("./model/texture/african_head_diffuse.tga");
+     color_map->flip_vertically();
       TGAImage image_1(ny, nx, TGAImage::RGB);
-    
+
+      for(double&i:zbuffer)i=-100000.0;
      drawModelFilled(model,image_1);
 
  

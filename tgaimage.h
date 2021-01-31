@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <fstream>
 #include <vector>
-
+#include <glm/glm.hpp>
 #pragma pack(push,1)
 struct TGA_Header {
     std::uint8_t  idlength{};
@@ -25,7 +25,7 @@ struct TGA_Header {
 struct TGAColor {
     std::uint8_t bgra[4] = {0,0,0,0};
     std::uint8_t bytespp = {0};
-
+     
     TGAColor() = default;
     TGAColor(const std::uint8_t R, const std::uint8_t G, const std::uint8_t B, const std::uint8_t A=255) : bgra{B,G,R,A}, bytespp(4) { }
     TGAColor(const std::uint8_t v) : bgra{v,0,0,0}, bytespp(1) { }
@@ -42,6 +42,13 @@ struct TGAColor {
         double clamped = std::max(0., std::min(intensity, 1.));
         for (int i=0; i<4; i++) res.bgra[i] = bgra[i]*clamped;
         return res;
+    }
+    TGAColor operator *(const TGAColor& _b) const {
+          glm::vec4 a(bgra[0],bgra[1],bgra[2],bgra[3]);
+          glm::vec4 b(_b.bgra[0],_b.bgra[1],_b.bgra[2],_b.bgra[3]);
+           a/=255.0;b/=255.0;
+           auto color=a*b;color*=255.0;
+           return TGAColor(color[0],color[1],color[2],color[3]);
     }
 };
 
@@ -66,6 +73,12 @@ public:
     void flip_vertically();
     void scale(const int w, const int h);
     TGAColor get(const int x, const int y) const;
+    TGAColor get(const float x, const float y)const{
+        int _x=(int)width*x;
+        int _y=(int)height*y;
+        auto color=  get(_x,_y);
+        return color;
+    }
     void set(const int x, const int y, const TGAColor &c);
     int get_width() const;
     int get_height() const;
