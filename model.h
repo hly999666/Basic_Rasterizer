@@ -1,8 +1,11 @@
-#ifndef __MODEL_H__
-#define __MODEL_H__
+#ifndef MODEL_H
+#define MODEL_H
+
 #include <vector>
 #include <string>
+#ifndef GEOMETRY_H
 #include "geometry.h"
+#endif
 #include "tgaimage.h"
 
 class Model {

@@ -1,8 +1,9 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#ifndef MODEL_H
 #include "model.h"
-
+#endif
 Model::Model(const std::string filename) : verts_(), uv_(), norms_(), facet_vrt_(), facet_tex_(), facet_nrm_(), diffusemap_(), normalmap_(), specularmap_() {
     std::ifstream in;
     in.open (filename, std::ifstream::in);

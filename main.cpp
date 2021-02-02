@@ -15,18 +15,24 @@
 //#include "lib/vec3.hpp"
 //#include "lib/general_helper.hpp"
 #include "tgaimage.h"
+#ifndef GEOMETRY_H
 #include "geometry.h"
+#endif
+#ifndef MODEL_H
 #include "model.h"
+#endif
 Model *model = NULL;
 const int nx  = 512;
 const int ny = 512;
 const int width  = nx;
 const int height = ny;
+const int depth  = 255;
 double  zbuffer[width*height];
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red   = TGAColor(255, 0,   0,   255);
 const TGAColor green   = TGAColor(0, 255,   0,   255);
- const Vec3f light_dir(0,0,-1);
+const Vec3f light_dir(0,0,-1);
+ Vec3f camera(0,0,3);
  std::shared_ptr<TGAImage> color_map{new TGAImage()};
 void test_output(TGAImage& fb){
    for(int i=0;i<nx;i++){
@@ -140,6 +146,9 @@ void drawModelWireframe(Model* _model,TGAImage &image_1){
     }
 }
 void drawModelFilled(Model* model,TGAImage &image){
+    Matrix Projection = Matrix::identity(4);
+    Matrix ViewPort   = viewport(width/8, height/8, width*3/4, height*3/4,depth);
+    Projection[3][2] = -1.f/camera.z;
    #pragma omp parallel for
     for (int i=0; i<model->nfaces(); i++) { 
  
@@ -148,7 +157,7 @@ void drawModelFilled(Model* model,TGAImage &image){
     Vec2f uv[3];
     for (int j=0; j<3; j++) { 
         Vec3f v =  model->vert(i,j); 
-        screen_coords[j] = Vec3f((v.x+1.)*width/2., (v.y+1.)*height/2.,v.z); 
+        screen_coords[j] = m2v(ViewPort*Projection*v2m(v)); 
         uv[j]= model->uv(i,j);
         world_coords[j]=v;
     } 

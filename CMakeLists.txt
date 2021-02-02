@@ -27,7 +27,7 @@ find_package(glm REQUIRED)
  
 file(GLOB SOURCES *.h *.cpp) 
 
-message("${SOURCES}")
+#message("${SOURCES}")
 add_executable(basic_rasterizer_1  ${SOURCES})
 
 
