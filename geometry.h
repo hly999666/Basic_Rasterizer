@@ -183,4 +183,6 @@ public:
 Vec3f m2v(Matrix m);
 Matrix v2m(Vec3f v);
 Matrix viewport(int x, int y, int w, int h,int depth);
+Matrix lookat(Vec3f eye, Vec3f center, Vec3f up);
+
 #endif 
