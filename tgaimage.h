@@ -1,9 +1,12 @@
-#ifndef __IMAGE_H__
-#define __IMAGE_H__
+#ifndef TGAIMAGE_H
+#define TGAIMAGE_H
 
 #include <cstdint>
 #include <fstream>
 #include <vector>
+#ifndef GLM_FORCE_SWIZZLE
+#define GLM_FORCE_SWIZZLE
+#endif
 #include <glm/glm.hpp>
 #pragma pack(push,1)
 struct TGA_Header {
@@ -86,6 +89,7 @@ public:
     std::uint8_t *buffer();
     void clear();
 };
-
-#endif //__IMAGE_H__
-
+const TGAColor white = TGAColor(255, 255, 255, 255);
+const TGAColor red   = TGAColor(255, 0,   0,   255);
+const TGAColor green   = TGAColor(0, 255,   0,   255);
+#endif  

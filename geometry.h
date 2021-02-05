@@ -1,6 +1,6 @@
 #ifndef GEOMETRY_H
 #define GEOMETRY_H
-
+#include <glm/glm.hpp>
 #include <cmath>
 #include <iostream>
 #include <cassert>
@@ -182,7 +182,10 @@ public:
 
 Vec3f m2v(Matrix m);
 Matrix v2m(Vec3f v);
-Matrix viewport(int x, int y, int w, int h,int depth);
-Matrix lookat(Vec3f eye, Vec3f center, Vec3f up);
-
+inline glm::vec4 embed4(Vec3f v){
+    return glm::vec4(v[0],v[1],v[2],1.0);
+};
+glm::mat4 viewport(int x, int y, int w, int h,int depth);
+glm::mat4 lookat(Vec3f eye, Vec3f center, Vec3f up);
+glm::mat4 projection(float coeff); 
 #endif 
