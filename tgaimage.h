@@ -76,7 +76,7 @@ public:
     void flip_vertically();
     void scale(const int w, const int h);
     TGAColor get(const int x, const int y) const;
-    TGAColor get(const float x, const float y)const{
+    TGAColor getByUV(const float x, const float y)const{
         int _x=(int)width*x;
         int _y=(int)height*y;
         auto color=  get(_x,_y);

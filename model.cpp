@@ -46,10 +46,10 @@ Model::Model(const std::string filename) : verts_(), uv_(), norms_(), facet_vrt_
         }
     }
     in.close();
-   /*  std::cerr << "# v# " << nverts() << " f# "  << nfaces() << " vt# " << uv_.size() << " vn# " << norms_.size() << std::endl;
+    std::cerr << "# v# " << nverts() << " f# "  << nfaces() << " vt# " << uv_.size() << " vn# " << norms_.size() << std::endl;
     load_texture(filename, "_diffuse.tga",    diffusemap_);
     load_texture(filename, "_nm_tangent.tga", normalmap_);
-    load_texture(filename, "_spec.tga",       specularmap_); */
+    load_texture(filename, "_spec.tga",       specularmap_);
 }
 
 int Model::nverts() const {
@@ -77,7 +77,7 @@ void Model::load_texture(std::string filename, const std::string suffix, TGAImag
 }
 
 TGAColor Model::diffuse(const vec2 &uvf) const {
-    return diffusemap_.get(uvf[0]*diffusemap_.get_width(), uvf[1]*diffusemap_.get_height());
+    return diffusemap_.get((int)(uvf[0]*diffusemap_.get_width()), int(uvf[1]*diffusemap_.get_height()));
 }
 
 vec3 Model::normal(const vec2 &uvf) const {

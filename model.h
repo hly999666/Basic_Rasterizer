@@ -9,7 +9,7 @@
 #include "tgaimage.h"
 
 class Model {
-private:
+public:
     std::vector<vec3> verts_;     // array of vertices
     std::vector<vec2> uv_;        // array of tex coords
     std::vector<vec3> norms_;     // array of normal vectors
