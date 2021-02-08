@@ -89,7 +89,7 @@ vec3 Model::normal(const vec2 &uvf) const {
 }
 
 double Model::specular(const vec2 &uvf) const {
-    return specularmap_.get(uvf[0]*specularmap_.get_width(), uvf[1]*specularmap_.get_height())[0];
+    return specularmap_.get(uvf[0]*specularmap_.get_width(), uvf[1]*specularmap_.get_height())[0]*1.0;
 }
 
 vec2 Model::uv(const int iface, const int nthvert) const {

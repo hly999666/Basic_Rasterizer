@@ -18,6 +18,14 @@
 #ifndef GEOMETRY_H
 #include "geometry.h"
 #endif
+
+#ifndef __GEOMETRY_A_H__
+#include "geometry_a.h"
+#endif
+
+#ifndef MY_MATH_HELPER_H
+#include "my_math_helper.hpp"
+#endif
 #ifndef MODEL_H
 #include "model.h"
 #endif
@@ -54,7 +62,7 @@ struct GouraudShader : public IShader {
     Vec3f varying_intensity;  
     virtual glm::vec4 vertex(int iface, int nthvert,gl_enviroment& envir) {
         auto mt = (envir.Viewport*envir.Projection*envir.View) ;
-        varying_intensity[nthvert] = std::max(0.f, model->normal(iface, nthvert)*light_dir);  
+        varying_intensity[nthvert] = std::max(0.0f, model->normal(iface, nthvert)*light_dir);  
         auto  gl_Vertex = embed4(model->vert(iface, nthvert));  
         return mt*gl_Vertex;  
     }
@@ -74,16 +82,13 @@ class ComplexShader_1 : public IShader {
     virtual glm::vec4 vertex(int iface, int nthvert,gl_enviroment& envir) {
         auto now_uv=model->uv(iface, nthvert);
         glm::mat3 t_uv;
-         t_uv[0][nthvert]=now_uv.x;
-         t_uv[1][nthvert]=now_uv.y;
-         t_uv[2][nthvert]=0.0;
-          varying_uv=glm::transpose(t_uv);
+        mat3_set_col(t_uv,nthvert,glm::vec3(now_uv.x,now_uv.y,1.0));
+        varying_uv=glm::transpose(t_uv);
         //note like glsl glm all mat are colum-main,need transpose
         //varying_uv=glm::transpose(varying_uv);
-        varying_intensity[nthvert] = std::max(0.f, model->normal(iface, nthvert)*light_dir); 
+        varying_intensity[nthvert] = std::max(0.0f, model->normal(iface, nthvert)*light_dir); 
         auto  gl_Vertex = embed4(model->vert(iface, nthvert));  
-      
-           auto mt = (envir.Viewport*envir.Projection*envir.View) ;
+        auto mt = (envir.Viewport*envir.Projection*envir.View) ;
         return mt*gl_Vertex;
     }
     
@@ -105,12 +110,97 @@ class ComplexShader_1 : public IShader {
     }
 };
 
+class PhongShader_1 : public IShader {
+    public:
+    Vec3f  varying_intensity;
+    glm::vec3 l; 
+    glm::mat3 varying_uv;         
+    glm::mat3 varying_nrm; 
+    glm::mat3 ndc_tri;    
+    glm::mat4  uniform_M;   //  Projection*ModelView
+    glm::mat4 uniform_MIT; // (Projection*ModelView).invert_transpose()
+    glm::mat4 Projection;
+    glm::mat4 View;
+    PhongShader_1(const gl_enviroment& envir):
+    Projection(envir.Projection),
+    View(envir.View)
+    {
+        uniform_M=envir.Projection*envir.View;
+        uniform_MIT=glm::transpose(glm::inverse(uniform_M));
+        glm::vec4 light_loc=Projection*View*glm::vec4(light_dir.x,light_dir.y,light_dir.z,0.0);
+        l=glm::normalize(glm::vec3(light_loc.x,light_loc.y,light_loc.z));
+    }
+  /*   glm::mat3 targentSpaceNormalMappingMat(const glm::vec3& bn){
+  
+        glm::mat3 AI  = glm::inverse(buildMat3FromColums(
+                       col(ndc_tri,1)-col(ndc_tri,0),
+                       col(ndc_tri,2)-col(ndc_tri,1),
+                       bn));
+        glm::vec3 i     = AI*glm::vec3(varying_uv[0][1] - varying_uv[0][0], varying_uv[0][2] - varying_uv[0][0], 0);
+        glm::vec3 j     = AI*glm::vec3(varying_uv[1][1] - varying_uv[1][0], varying_uv[1][2] - varying_uv[1][0], 0);
+        glm::mat3 B   =glm::transpose(buildMat3FromColums(
+                                glm::normalize(i), 
+                                glm::normalize(j), 
+                                bn));
+        return B;
+    } */
+    virtual glm::vec4 vertex(int iface, int nthvert,gl_enviroment& envir) {
+        auto now_uv=model->uv(iface, nthvert);
+         //glm::mat3 t_uv;
+         mat3_set_col(varying_uv,nthvert,glm::vec3(now_uv.x,now_uv.y,1.0));
+        //note like glsl glm all mat are colum-main,need transpose
+        //varying_uv=glm::transpose(t_uv);
+         auto norm_from_verts=model->normal(iface, nthvert);
+         glm::vec4 v_nrm4=uniform_MIT*glm::vec4(norm_from_verts.x,norm_from_verts.y,norm_from_verts.z,0.0);
+         glm::vec3 v_nrm(v_nrm4.x,v_nrm4.y,v_nrm4.z);
+         mat3_set_col (varying_nrm,nthvert,v_nrm);
+   
+     
+        varying_intensity[nthvert] = std::max(0.0f, model->normal(iface, nthvert)*light_dir); 
+        auto  gl_Vertex = embed4(model->vert(iface, nthvert));  
+      
+        auto mt = (envir.Viewport*envir.Projection*envir.View) ;
+        gl_Vertex =mt*gl_Vertex;
+         
+         mat3_set_col(ndc_tri,nthvert, glm::vec3(gl_Vertex.x/gl_Vertex[3],gl_Vertex.y/gl_Vertex[3],gl_Vertex.z/gl_Vertex[3]));
+         
+        return gl_Vertex;
+    }
+    
+    virtual bool fragment(Vec3f bar, TGAColor &color) {
+        //float intensity = varying_intensity*bar; 
+        glm::vec3 _bar(bar.x,bar.y,bar.z);
+        
+
+        glm::vec3 vUV= glm::transpose(varying_uv)*_bar;
+        glm::vec3 bn = glm::normalize((glm::transpose(varying_nrm)*_bar)); // per-vertex normal interpolation
+        Vec2f uv(vUV.x,vUV.y);
+
+        auto B=targentSpaceNormalMappingMat(bn);
+       
+        auto normal_from_tex= glm_vec3(model->normal(uv));
+         glm::vec3 n=glm::normalize(glm::transpose(B)*normal_from_tex);
+       
+        double diff = std::max(0.0f, glm::dot(n,l));
+         glm::vec3 r=glm::normalize(2.0f*dot(n,l)*n - l);
+    
+     auto spec_from_tex=model->specular(uv);
+       double spec = std::pow(std::max(r.z, 0.f), 5.0+spec_from_tex);
+          
+     TGAColor c = model->diffuse(uv);
+     float ambient=10.0;
+    
+    for (int i=0; i<3; i++)color[i] = std::min<int>(ambient + c[i]*(diff + spec), 255); 
+
+        return false;                           
+    }
+};
 struct NaiveToonShader : public IShader{
       Vec3f varying_intensity;
     
     virtual glm::vec4 vertex(int iface, int nthvert,gl_enviroment& envir) {
         auto mt = (envir.Viewport*envir.Projection*envir.View) ;
-        varying_intensity[nthvert] = std::max(0.f, model->normal(iface, nthvert)*light_dir);  
+        varying_intensity[nthvert] = std::max(0.0f, model->normal(iface, nthvert)*light_dir);  
         auto  gl_Vertex = embed4(model->vert(iface, nthvert));  
         return mt*gl_Vertex;  
     }
@@ -150,16 +240,14 @@ void drawModelFilled(Model* model,TGAImage &image,std::vector<double>& zbuffer,g
         envir.setProjection((camera-lookAtPos).norm());
   // #pragma omp parallel for
 
-      
+        PhongShader_1 shader(envir);
     for (int i=0; i<model->nfaces(); i++) { 
  
     glm::vec4 screen_coords[3]; 
     Vec3f world_coords[3]; 
     Vec2f uv[3];
      float v_intensity[3];
-     ComplexShader_1 shader;
-        shader.uniform_M=envir.Projection*envir.View;
-        shader.uniform_MIT=glm::transpose(glm::inverse(shader.uniform_M));
+   
     for (int j=0; j<3; j++) { 
         Vec3f v =  model->vert(i,j); 
         
