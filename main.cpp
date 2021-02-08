@@ -130,27 +130,28 @@ class PhongShader_1 : public IShader {
         glm::vec4 light_loc=Projection*View*glm::vec4(light_dir.x,light_dir.y,light_dir.z,0.0);
         l=glm::normalize(glm::vec3(light_loc.x,light_loc.y,light_loc.z));
     }
-  /*   glm::mat3 targentSpaceNormalMappingMat(const glm::vec3& bn){
+    glm::mat3 DarbouxFrame(const glm::vec3& bn){
   
-        glm::mat3 AI  = glm::inverse(buildMat3FromColums(
-                       col(ndc_tri,1)-col(ndc_tri,0),
-                       col(ndc_tri,2)-col(ndc_tri,1),
-                       bn));
-        glm::vec3 i     = AI*glm::vec3(varying_uv[0][1] - varying_uv[0][0], varying_uv[0][2] - varying_uv[0][0], 0);
-        glm::vec3 j     = AI*glm::vec3(varying_uv[1][1] - varying_uv[1][0], varying_uv[1][2] - varying_uv[1][0], 0);
-        glm::mat3 B   =glm::transpose(buildMat3FromColums(
-                                glm::normalize(i), 
-                                glm::normalize(j), 
-                                bn));
-        return B;
-    } */
+         auto p0=col(ndc_tri,0);   auto p1=col(ndc_tri,1);   auto p2=col(ndc_tri,2);
+         auto p0p1=p1-p0;
+         auto p0p2=p2-p0;
+         glm::mat3 matrixFramePostion=buildMat3FromColums(p0p1,p0p2,glm::normalize(bn));
+         auto A_I=glm::inverse(matrixFramePostion);
+         auto i=A_I*glm::vec3(varying_uv[0][1] - varying_uv[0][0], varying_uv[0][2] - varying_uv[0][0], 0);
+         auto j=A_I*glm::vec3(varying_uv[1][1] - varying_uv[1][0], varying_uv[1][2] - varying_uv[1][0], 0);
+         i=glm::normalize(i);      j=glm::normalize(j);
+   
+         glm::mat3 matrixFrameUV=buildMat3FromColums(i,j,bn);
+        
+        return matrixFrameUV;
+    }
     virtual glm::vec4 vertex(int iface, int nthvert,gl_enviroment& envir) {
         auto now_uv=model->uv(iface, nthvert);
          //glm::mat3 t_uv;
          mat3_set_col(varying_uv,nthvert,glm::vec3(now_uv.x,now_uv.y,1.0));
         //note like glsl glm all mat are colum-main,need transpose
         //varying_uv=glm::transpose(t_uv);
-         auto norm_from_verts=model->normal(iface, nthvert);
+         auto norm_from_verts=glm::normalize(glm_vec3(model->normal(iface, nthvert)));
          glm::vec4 v_nrm4=uniform_MIT*glm::vec4(norm_from_verts.x,norm_from_verts.y,norm_from_verts.z,0.0);
          glm::vec3 v_nrm(v_nrm4.x,v_nrm4.y,v_nrm4.z);
          mat3_set_col (varying_nrm,nthvert,v_nrm);
@@ -173,14 +174,14 @@ class PhongShader_1 : public IShader {
         
 
         glm::vec3 vUV= glm::transpose(varying_uv)*_bar;
-        glm::vec3 bn = glm::normalize((glm::transpose(varying_nrm)*_bar)); // per-vertex normal interpolation
+        glm::vec3 normal_from_file = glm::normalize((glm::transpose(varying_nrm)*_bar)); // per-vertex normal interpolation
         Vec2f uv(vUV.x,vUV.y);
 
-        auto B=targentSpaceNormalMappingMat(bn);
+        auto B=DarbouxFrame(normal_from_file);
        
-        auto normal_from_tex= glm_vec3(model->normal(uv));
-         glm::vec3 n=glm::normalize(glm::transpose(B)*normal_from_tex);
-       
+        auto normal_from_tex=glm::normalize( glm_vec3(model->normal(uv)));
+         glm::vec3 n=glm::normalize(B*normal_from_tex);
+       //glm::vec3 n=normal_from_file;
         double diff = std::max(0.0f, glm::dot(n,l));
          glm::vec3 r=glm::normalize(2.0f*dot(n,l)*n - l);
     
@@ -190,7 +191,8 @@ class PhongShader_1 : public IShader {
      TGAColor c = model->diffuse(uv);
      float ambient=10.0;
     
-    for (int i=0; i<3; i++)color[i] = std::min<int>(ambient + c[i]*(diff + spec), 255); 
+     for (int i=0; i<3; i++)
+            color[i] = std::min<int>(ambient + c[i]*(diff + spec), 255); 
 
         return false;                           
     }

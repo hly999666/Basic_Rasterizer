@@ -4,6 +4,9 @@
 #ifndef GEOMETRY_H
 #include "geometry.h"
 #endif
+inline glm::vec3 col(const glm::mat3& mat,int i){
+    return glm::vec3(mat[0][i],mat[1][i],mat[2][i]);
+}
 inline void mat3_set_col(glm::mat3& mat,int i,const glm::vec3&v){
    mat[0][i]=v.x; mat[1][i]=v.y;mat[2][i]=v.z;
 }
@@ -21,7 +24,5 @@ inline glm::mat3 buildMat3FromColums(
 inline glm::vec3 glm_vec3(const Vec3f& v ){
     return glm::vec3(v.x,v.y,v.z);
 }
-inline glm::vec3 col(const glm::mat3& mat,int i){
-    return glm::vec3(mat[0][i],mat[1][i],mat[2][i]);
-}
+
 #endif
