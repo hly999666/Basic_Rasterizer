@@ -121,6 +121,8 @@ class PhongShader_1 : public IShader {
     glm::mat4 uniform_MIT; // (Projection*ModelView).invert_transpose()
     glm::mat4 Projection;
     glm::mat4 View;
+    mat<4,4> ModelView;
+    mat<4,4> ProjectionMat;
     PhongShader_1(const gl_enviroment& envir):
     Projection(envir.Projection),
     View(envir.View)
@@ -131,20 +133,20 @@ class PhongShader_1 : public IShader {
         l=glm::normalize(glm::vec3(light_loc.x,light_loc.y,light_loc.z));
     }
     glm::mat3 DarbouxFrame(const glm::vec3& bn){
-  
+ 
          auto p0=col(ndc_tri,0);   auto p1=col(ndc_tri,1);   auto p2=col(ndc_tri,2);
          auto p0p1=p1-p0;
          auto p0p2=p2-p0;
-         glm::mat3 matrixFramePostion=buildMat3FromColums(p0p1,p0p2,glm::normalize(bn));
-         auto A_I=glm::inverse(matrixFramePostion);
+         glm::mat3 matrixFramePostion=buildMat3FromColums(p0p1,p0p2,bn);
+         auto A_I=glm::inverse(matrixFramePostion); 
          auto i=A_I*glm::vec3(varying_uv[0][1] - varying_uv[0][0], varying_uv[0][2] - varying_uv[0][0], 0);
          auto j=A_I*glm::vec3(varying_uv[1][1] - varying_uv[1][0], varying_uv[1][2] - varying_uv[1][0], 0);
          i=glm::normalize(i);      j=glm::normalize(j);
-   
-         glm::mat3 matrixFrameUV=buildMat3FromColums(i,j,bn);
+         //matrix order in example is the same in glm,
+         glm::mat3 matrixFrameUV=glm::transpose(buildMat3FromColums(i,j,bn));
         
         return matrixFrameUV;
-    }
+    } 
     virtual glm::vec4 vertex(int iface, int nthvert,gl_enviroment& envir) {
         auto now_uv=model->uv(iface, nthvert);
          //glm::mat3 t_uv;
@@ -177,9 +179,9 @@ class PhongShader_1 : public IShader {
         glm::vec3 normal_from_file = glm::normalize((glm::transpose(varying_nrm)*_bar)); // per-vertex normal interpolation
         Vec2f uv(vUV.x,vUV.y);
 
-        auto B=DarbouxFrame(normal_from_file);
-       
-        auto normal_from_tex=glm::normalize( glm_vec3(model->normal(uv)));
+        //auto B=glm_mat3(_DarbouxFrame(vec_3(normal_from_file)));
+       auto B=DarbouxFrame(normal_from_file);
+        auto normal_from_tex=glm_vec3(model->normal(uv));
          glm::vec3 n=glm::normalize(B*normal_from_tex);
        //glm::vec3 n=normal_from_file;
         double diff = std::max(0.0f, glm::dot(n,l));
@@ -191,8 +193,8 @@ class PhongShader_1 : public IShader {
      TGAColor c = model->diffuse(uv);
      float ambient=10.0;
     
-     for (int i=0; i<3; i++)
-            color[i] = std::min<int>(ambient + c[i]*(diff + spec), 255); 
+     for (int i=0; i<3; i++) color[i] = std::min<int>(ambient + c[i]*(diff + spec), 255); 
+/*            color[i] =n[i]*255.0; */
 
         return false;                           
     }
@@ -219,6 +221,8 @@ struct NaiveToonShader : public IShader{
         return false;
     }
 };
+ 
+
  
 
 void drawModelWireframe(Model* _model,TGAImage &image_1){

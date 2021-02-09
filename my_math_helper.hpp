@@ -4,6 +4,9 @@
 #ifndef GEOMETRY_H
 #include "geometry.h"
 #endif
+#ifndef __GEOMETRY_A_H__
+#include "geometry_a.h"
+#endif
 inline glm::vec3 col(const glm::mat3& mat,int i){
     return glm::vec3(mat[0][i],mat[1][i],mat[2][i]);
 }
@@ -25,4 +28,16 @@ inline glm::vec3 glm_vec3(const Vec3f& v ){
     return glm::vec3(v.x,v.y,v.z);
 }
 
+inline vec<3> vec_3 (const glm::vec3& v ){
+    return vec<3> (v.x,v.y,v.z);
+}
+inline glm::mat3 glm_mat3 (const mat<3,3>& m ){
+    glm::mat3 ans;
+    for(int i=0;i<3;i++){
+          for(int j=0;j<3;j++){
+        ans[i][j]=m[i][j];
+    }
+    }
+    return glm::transpose(ans);
+}
 #endif
