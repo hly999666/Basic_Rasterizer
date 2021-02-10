@@ -40,4 +40,10 @@ inline glm::mat3 glm_mat3 (const mat<3,3>& m ){
     }
     return glm::transpose(ans);
 }
+inline glm::vec3 projectV4toV3(const glm::vec4& v ){
+    return glm::vec3(v.x/v[3],v.y/v[3],v.z/v[3]);
+}
+inline void clear_zbuffer(std::vector<double>&zbuffer){
+       for(auto& val:zbuffer)val=-8192.0;
+}
 #endif

@@ -51,7 +51,9 @@ glm::mat4 viewport(int x, int y, int w, int h,int depth) {
 
 
 glm::mat4 projection(float c){
-       auto p = glm::mat4(1.0f);
+  
+        auto p = glm::mat4(1.0f);
+         if(std::abs(c)<0.001)return p;
         p[3][2] = -1.0f/c;
         return glm::transpose(p);
 }

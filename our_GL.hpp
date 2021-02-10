@@ -40,12 +40,12 @@ public:
 };
 struct IShader {
     virtual ~IShader()=default;
-    virtual glm::vec4 vertex(int iface, int nthvert,gl_enviroment&) = 0;
+    virtual glm::vec4 vertex(int iface, int nthvert,const gl_enviroment&) = 0;
     virtual bool fragment(Vec3f bar, TGAColor &color) = 0;
 }; 
 Vec3f barycentric(Vec2i *pts, Vec2i P);
 void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color) ;
 inline void  line(Vec2i v0,Vec2i v1,TGAImage &image, TGAColor color);
 void triangle(Vec3f *pts,Vec2f* _uv, float* v_intensity,IShader* shader,TGAImage &image,std::vector<double> &zbuffer ,TGAColor _color,gl_enviroment& envir);
-void triangle(glm::vec4*pts, IShader &shader, TGAImage &image,std::vector<double> &zbuffer,gl_enviroment& envir);    
+void triangle(glm::vec4*pts, IShader &shader, TGAImage &image,std::vector<double> &zbuffer,const gl_enviroment& envir);    
 #endif

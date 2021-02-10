@@ -51,7 +51,7 @@ inline void  line(Vec2i v0,Vec2i v1,TGAImage &image, TGAColor color){
     line(v0.x,v0.y,v1.x,v1.y,image,color);
 }
 
-void triangle(glm::vec4 *_pts4,IShader& shader,TGAImage &image,std::vector<double>& zbuffer,gl_enviroment& envir) { 
+void triangle(glm::vec4 *_pts4,IShader& shader,TGAImage &image,std::vector<double>& zbuffer, const gl_enviroment& envir) { 
     int width=envir.width;
     int height=envir.height;
    Vec3f pts[3];
@@ -101,6 +101,8 @@ void triangle(glm::vec4 *_pts4,IShader& shader,TGAImage &image,std::vector<doubl
                if (!discard) {
                    zbuffer[int(P.x+P.y*width)]=z;
                   image.set(P.x, P.y, color);
+               }else{
+                   int a=666;
                }
                 //image.set(P.x, P.y,TGAColor(255*intensity_interpolated,255*intensity_interpolated,255*intensity_interpolated,255));
             } 

@@ -32,16 +32,20 @@
 #ifndef OUR_GL_H
 #include "our_GL.hpp"
 #endif
-Model *model = NULL;
+#ifndef SHADER_H
+#include "Shader.hpp"
+#endif
+Model *model = nullptr;
 const int nx  = 512;
 const int ny = 512;
 const int width  = nx;
 const int height = ny;
 const int depth  = 255;
  
-const Vec3f light_dir = Vec3f(1,1,1).normalize();
- Vec3f camera(1,1,3);
+const Vec3f light_dir = Vec3f(1,1,0).normalize();
+ Vec3f camera(1,1,4);
  Vec3f lookAtPos(0,0,0);
+ Vec3f up(0,1,0);
  std::shared_ptr<TGAImage> color_map{new TGAImage()};
 void test_output(TGAImage& fb){
    for(int i=0;i<nx;i++){
@@ -58,172 +62,7 @@ void test_output(TGAImage& fb){
 }
 }
 
-struct GouraudShader : public IShader {
-    Vec3f varying_intensity;  
-    virtual glm::vec4 vertex(int iface, int nthvert,gl_enviroment& envir) {
-        auto mt = (envir.Viewport*envir.Projection*envir.View) ;
-        varying_intensity[nthvert] = std::max(0.0f, model->normal(iface, nthvert)*light_dir);  
-        auto  gl_Vertex = embed4(model->vert(iface, nthvert));  
-        return mt*gl_Vertex;  
-    }
-    virtual bool fragment(Vec3f bar, TGAColor &color) {
-        float intensity = varying_intensity*bar;   
-        color = TGAColor(255, 255, 255)*intensity; 
-        return false;                        
-     
-    }
-};
-class ComplexShader_1 : public IShader {
-    public:
-    Vec3f          varying_intensity;  
-    glm::mat3 varying_uv;        // same as above
-    glm::mat4  uniform_M;   //  Projection*ModelView
-    glm::mat4 uniform_MIT; // (Projection*ModelView).invert_transpose()
-    virtual glm::vec4 vertex(int iface, int nthvert,gl_enviroment& envir) {
-        auto now_uv=model->uv(iface, nthvert);
-        glm::mat3 t_uv;
-        mat3_set_col(t_uv,nthvert,glm::vec3(now_uv.x,now_uv.y,1.0));
-        varying_uv=glm::transpose(t_uv);
-        //note like glsl glm all mat are colum-main,need transpose
-        //varying_uv=glm::transpose(varying_uv);
-        varying_intensity[nthvert] = std::max(0.0f, model->normal(iface, nthvert)*light_dir); 
-        auto  gl_Vertex = embed4(model->vert(iface, nthvert));  
-        auto mt = (envir.Viewport*envir.Projection*envir.View) ;
-        return mt*gl_Vertex;
-    }
-    
-    virtual bool fragment(Vec3f bar, TGAColor &color) {
-        //float intensity = varying_intensity*bar; 
-        glm::vec3 _bar(bar.x,bar.y,bar.z);
-       
-        glm::vec3 vUV= varying_uv*_bar;
-        Vec2f uv(vUV.x,vUV.y);
-        auto tex_color_0=model->diffuse(uv);
-         auto _n4=uniform_MIT*embed4(model->normal(uv));
-          glm::vec3 n(_n4);n=glm::normalize(n);
-    
-        glm::vec3 l(uniform_M *embed4(light_dir)); l=glm::normalize( l);
-         float intensity = glm::max(0.0f,glm::dot(n,l));
-        color = tex_color_0*intensity;    
- 
-        return false;                           
-    }
-};
 
-class PhongShader_1 : public IShader {
-    public:
-    Vec3f  varying_intensity;
-    glm::vec3 l; 
-    glm::mat3 varying_uv;         
-    glm::mat3 varying_nrm; 
-    glm::mat3 ndc_tri;    
-    glm::mat4  uniform_M;   //  Projection*ModelView
-    glm::mat4 uniform_MIT; // (Projection*ModelView).invert_transpose()
-    glm::mat4 Projection;
-    glm::mat4 View;
-    mat<4,4> ModelView;
-    mat<4,4> ProjectionMat;
-    PhongShader_1(const gl_enviroment& envir):
-    Projection(envir.Projection),
-    View(envir.View)
-    {
-        uniform_M=envir.Projection*envir.View;
-        uniform_MIT=glm::transpose(glm::inverse(uniform_M));
-        glm::vec4 light_loc=Projection*View*glm::vec4(light_dir.x,light_dir.y,light_dir.z,0.0);
-        l=glm::normalize(glm::vec3(light_loc.x,light_loc.y,light_loc.z));
-    }
-    glm::mat3 DarbouxFrame(const glm::vec3& bn){
- 
-         auto p0=col(ndc_tri,0);   auto p1=col(ndc_tri,1);   auto p2=col(ndc_tri,2);
-         auto p0p1=p1-p0;
-         auto p0p2=p2-p0;
-         glm::mat3 matrixFramePostion=buildMat3FromColums(p0p1,p0p2,bn);
-         auto A_I=glm::inverse(matrixFramePostion); 
-         auto i=A_I*glm::vec3(varying_uv[0][1] - varying_uv[0][0], varying_uv[0][2] - varying_uv[0][0], 0);
-         auto j=A_I*glm::vec3(varying_uv[1][1] - varying_uv[1][0], varying_uv[1][2] - varying_uv[1][0], 0);
-         i=glm::normalize(i);      j=glm::normalize(j);
-         //matrix order in example is the same in glm,
-         glm::mat3 matrixFrameUV=glm::transpose(buildMat3FromColums(i,j,bn));
-        
-        return matrixFrameUV;
-    } 
-    virtual glm::vec4 vertex(int iface, int nthvert,gl_enviroment& envir) {
-        auto now_uv=model->uv(iface, nthvert);
-         //glm::mat3 t_uv;
-         mat3_set_col(varying_uv,nthvert,glm::vec3(now_uv.x,now_uv.y,1.0));
-        //note like glsl glm all mat are colum-main,need transpose
-        //varying_uv=glm::transpose(t_uv);
-         auto norm_from_verts=glm::normalize(glm_vec3(model->normal(iface, nthvert)));
-         glm::vec4 v_nrm4=uniform_MIT*glm::vec4(norm_from_verts.x,norm_from_verts.y,norm_from_verts.z,0.0);
-         glm::vec3 v_nrm(v_nrm4.x,v_nrm4.y,v_nrm4.z);
-         mat3_set_col (varying_nrm,nthvert,v_nrm);
-   
-     
-        varying_intensity[nthvert] = std::max(0.0f, model->normal(iface, nthvert)*light_dir); 
-        auto  gl_Vertex = embed4(model->vert(iface, nthvert));  
-      
-        auto mt = (envir.Viewport*envir.Projection*envir.View) ;
-        gl_Vertex =mt*gl_Vertex;
-         
-         mat3_set_col(ndc_tri,nthvert, glm::vec3(gl_Vertex.x/gl_Vertex[3],gl_Vertex.y/gl_Vertex[3],gl_Vertex.z/gl_Vertex[3]));
-         
-        return gl_Vertex;
-    }
-    
-    virtual bool fragment(Vec3f bar, TGAColor &color) {
-        //float intensity = varying_intensity*bar; 
-        glm::vec3 _bar(bar.x,bar.y,bar.z);
-        
-
-        glm::vec3 vUV= glm::transpose(varying_uv)*_bar;
-        glm::vec3 normal_from_file = glm::normalize((glm::transpose(varying_nrm)*_bar)); // per-vertex normal interpolation
-        Vec2f uv(vUV.x,vUV.y);
-
-        //auto B=glm_mat3(_DarbouxFrame(vec_3(normal_from_file)));
-       auto B=DarbouxFrame(normal_from_file);
-        auto normal_from_tex=glm_vec3(model->normal(uv));
-         glm::vec3 n=glm::normalize(B*normal_from_tex);
-       //glm::vec3 n=normal_from_file;
-        double diff = std::max(0.0f, glm::dot(n,l));
-         glm::vec3 r=glm::normalize(2.0f*dot(n,l)*n - l);
-    
-     auto spec_from_tex=model->specular(uv);
-       double spec = std::pow(std::max(r.z, 0.f), 5.0+spec_from_tex);
-          
-     TGAColor c = model->diffuse(uv);
-     float ambient=10.0;
-    
-     for (int i=0; i<3; i++) color[i] = std::min<int>(ambient + c[i]*(diff + spec), 255); 
-/*            color[i] =n[i]*255.0; */
-
-        return false;                           
-    }
-};
-struct NaiveToonShader : public IShader{
-      Vec3f varying_intensity;
-    
-    virtual glm::vec4 vertex(int iface, int nthvert,gl_enviroment& envir) {
-        auto mt = (envir.Viewport*envir.Projection*envir.View) ;
-        varying_intensity[nthvert] = std::max(0.0f, model->normal(iface, nthvert)*light_dir);  
-        auto  gl_Vertex = embed4(model->vert(iface, nthvert));  
-        return mt*gl_Vertex;  
-    }
-    virtual bool fragment(Vec3f bar, TGAColor &color) {
- 
-         float intensity = varying_intensity*bar;
-        if (intensity>.85) intensity = 1;
-        else if (intensity>.60) intensity = .80;
-        else if (intensity>.45) intensity = .60;
-        else if (intensity>.30) intensity = .45;
-        else if (intensity>.15) intensity = .30;
-        else intensity = 0;
-        color = TGAColor(255, 155, 0)*intensity;
-        return false;
-    }
-};
- 
-
- 
 
 void drawModelWireframe(Model* _model,TGAImage &image_1){
       #pragma omp parallel for
@@ -241,14 +80,14 @@ void drawModelWireframe(Model* _model,TGAImage &image_1){
     }
 }
 void drawModelFilled(Model* model,TGAImage &image,std::vector<double>& zbuffer,gl_enviroment& envir){
-        envir.setLookat(camera, lookAtPos, Vec3f(0,1,0));
+        envir.setLookat(camera, lookAtPos, up);
         envir.setViewport(width/8, height/8, width*3/4, height*3/4,depth);
         envir.setProjection((camera-lookAtPos).norm());
-  // #pragma omp parallel for
-
-        PhongShader_1 shader(envir);
+  
+  
+    #pragma omp parallel for
     for (int i=0; i<model->nfaces(); i++) { 
- 
+   PhongShader_1 shader(envir);
     glm::vec4 screen_coords[3]; 
     Vec3f world_coords[3]; 
     Vec2f uv[3];
@@ -270,6 +109,70 @@ void drawModelFilled(Model* model,TGAImage &image,std::vector<double>& zbuffer,g
 } 
 }
 
+
+void drawModelFilledWithShadow(Model* model,TGAImage &image,std::vector<double>& zbuffer,gl_enviroment& envir){
+       //shadow pass
+        TGAImage depthForShaow(width, height, TGAImage::RGB);
+        gl_enviroment shadow_pass_envir(width,height,depth);
+        shadow_pass_envir.setLookat(light_dir, lookAtPos, up);
+        shadow_pass_envir.setViewport(width/8, height/8, width*3/4, height*3/4,depth);
+        //directional light ,Orthographic Projection
+        shadow_pass_envir.setProjection(0.0);
+
+      
+    
+       //#pragma omp parallel for
+        for (int i=0; i<model->nfaces(); i++) {
+              DepthShader depthshader(shadow_pass_envir);
+                glm::vec4 screen_coords[3];
+            for (int j=0; j<3; j++) {
+                screen_coords[j] = depthshader.vertex(i, j,shadow_pass_envir);
+            }
+            triangle(screen_coords, depthshader, depthForShaow,zbuffer, shadow_pass_envir);
+        }
+     
+       // depthForShaow.flip_vertically(); // to place the origin in the bottom left corner of the image
+        depthForShaow.write_tga_file("depth.tga");
+       
+       clear_zbuffer(zbuffer);
+       //image=depthForShaow;
+     
+       
+       
+       
+        envir.setLookat(camera, lookAtPos, up);
+        envir.setViewport(width/8, height/8, width*3/4, height*3/4,depth);
+        envir.setProjection((camera-lookAtPos).norm());
+
+        glm::mat4 mat_world_to_shdaow_map = 
+        shadow_pass_envir.Viewport*
+        shadow_pass_envir.Projection*
+        shadow_pass_envir.View;
+        glm::mat4 mat_world_to_viewport=envir.Viewport*envir.Projection*envir.View;
+       auto mat_shadow=mat_world_to_shdaow_map*glm::inverse(mat_world_to_viewport);
+        // #pragma omp parallel for
+    for (int i=0; i<model->nfaces(); i++) { 
+  PhongShader_1 shader(envir,true,mat_shadow,&depthForShaow);
+    glm::vec4 screen_coords[3]; 
+    Vec3f world_coords[3]; 
+    Vec2f uv[3];
+     float v_intensity[3];
+   
+    for (int j=0; j<3; j++) { 
+        Vec3f v =  model->vert(i,j); 
+        
+        screen_coords[j] =shader.vertex(i,j,envir); 
+    /*     uv[j]= model->uv(i,j);
+        world_coords[j]=v;
+        v_intensity[j] = model->normal(i, j).normalize()*light_dir; */
+    } 
+/*      Vec3f n = (world_coords[2]-world_coords[0])^(world_coords[1]-world_coords[0]); 
+    n.normalize(); 
+    float intensity = n*light_dir;  */
+    //triangle(screen_coords,uv, v_intensity,image, TGAColor(255,255,255, 255)); 
+    triangle(screen_coords,shader,image, zbuffer,envir); 
+} 
+}
  
 
 int main(int argc, char **argv) {
@@ -277,9 +180,10 @@ int main(int argc, char **argv) {
     if (2==argc) {
         model = new Model(argv[1]);
     } else {
-        model = new Model("./model/african_head/african_head.obj");
+        model = new Model("./model/Suzanne.obj");
     } 
  
+     initShaderEnvir(model,light_dir);
 /*       color_map->read_tga_file("./model/texture/african_head_diffuse.tga");
      color_map->flip_vertically(); */
       TGAImage image_1(ny, nx, TGAImage::RGB);
@@ -287,7 +191,7 @@ int main(int argc, char **argv) {
       for(double&i:zbuffer)i=-8196.0;
       gl_enviroment envir(width,height,depth);
 
-     drawModelFilled(model,image_1,zbuffer,envir);
+     drawModelFilledWithShadow(model,image_1,zbuffer,envir);
 
  
 
