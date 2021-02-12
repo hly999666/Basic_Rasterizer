@@ -135,8 +135,8 @@ void drawModelFilledWithShadow(Model* model,TGAImage &image,std::vector<double>&
         depthForShaow.write_tga_file("depth.tga");
        
        clear_zbuffer(zbuffer);
-       //image=depthForShaow;
-     
+       image=depthForShaow;
+       return;
        
        
        
@@ -180,7 +180,7 @@ int main(int argc, char **argv) {
     if (2==argc) {
         model = new Model(argv[1]);
     } else {
-        model = new Model("./model/Suzanne.obj");
+        model = new Model("./model/african_head/african_head.obj");
     } 
  
      initShaderEnvir(model,light_dir);

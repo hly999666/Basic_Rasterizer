@@ -239,4 +239,117 @@ class  DepthShader : public IShader {
         return false;
     }
 };
+//just for render zbuffer
+class ZShader : public IShader {
+    public:
+    const gl_enviroment& _envir;
+    glm::mat3 varying_uv; 
+    glm::mat3 ndc_tri;         
+    glm::mat4 Projection;
+    glm::mat4 View; 
+    glm::mat4 uniform_M;
+    ZShader(const gl_enviroment& envir):
+    _envir(envir),
+    Projection(envir.Projection),
+    View(envir.View)
+ 
+    {
+        uniform_M=envir.Projection*envir.View;
+       
+    }
+ 
+    virtual glm::vec4 vertex(int iface, int nthvert,const gl_enviroment& envir) {
+        //set up UI
+        auto now_uv=cur_model->uv(iface, nthvert);
+        mat3_set_col(varying_uv,nthvert,glm::vec3(now_uv.x,now_uv.y,1.0));
+  
+       //set up  vertex
+        auto  gl_Vertex = embed4(cur_model->vert(iface, nthvert));        
+        auto mt = (envir.Viewport*envir.Projection*envir.View) ;
+        gl_Vertex =mt*gl_Vertex;
+        mat3_set_col(ndc_tri,nthvert, projectV4toV3(gl_Vertex));
+        
+       return gl_Vertex;
+    }
+    
+    virtual bool fragment(Vec3f bar, TGAColor &color) {
+        
+        glm::vec3 _bar(bar.x,bar.y,bar.z);
+        
+
+        glm::vec3 vUV= glm::transpose(varying_uv)*_bar;
+        glm::vec3 vPos=glm::transpose(ndc_tri)*_bar;
+ 
+ 
+        Vec2f uv(vUV.x,vUV.y);
+         Vec3f gl_FragCoord(vPos.x,vPos.y,vPos.z);
+          color = TGAColor(255, 255, 255)*((gl_FragCoord.z+1.f)/2.f);
+        return false;
+                 
+    }
+};
+class AOShader : public IShader {
+    public:
+    const gl_enviroment& _envir;
+    glm::mat3 varying_uv; 
+    glm::mat3 ndc_tri;         
+    glm::mat4 Projection;
+    glm::mat4 uniform_M;
+    glm::mat4 View;
+    const double* zbuffer{nullptr};
+    TGAImage* occl{nullptr};
+    //true compute ao,false render with ao
+    bool produceOrRender{false};
+    AOShader(const gl_enviroment& envir,const double* _zbuffer,TGAImage* _occl=nullptr,bool mode_flag=false):
+    _envir(envir),
+    Projection(envir.Projection),
+    View(envir.View),
+    zbuffer(_zbuffer),
+    occl{_occl},
+    produceOrRender{mode_flag}
+    {
+        uniform_M=envir.Projection*envir.View;
+       
+    }
+ 
+    virtual glm::vec4 vertex(int iface, int nthvert,const gl_enviroment& envir) {
+        //set up UI
+        auto now_uv=cur_model->uv(iface, nthvert);
+        mat3_set_col(varying_uv,nthvert,glm::vec3(now_uv.x,now_uv.y,1.0));
+  
+       //set up  vertex
+        auto  gl_Vertex = embed4(cur_model->vert(iface, nthvert));        
+        auto mt = (envir.Viewport*envir.Projection*envir.View) ;
+        gl_Vertex =mt*gl_Vertex;
+        mat3_set_col(ndc_tri,nthvert, projectV4toV3(gl_Vertex));
+        
+       return gl_Vertex;
+    }
+    
+    virtual bool fragment(Vec3f bar, TGAColor &color) {
+        
+        glm::vec3 _bar(bar.x,bar.y,bar.z);
+        
+
+        glm::vec3 vUV= glm::transpose(varying_uv)*_bar;
+        glm::vec3 vPos=glm::transpose(ndc_tri)*_bar;
+ 
+ 
+        Vec2f uv(vUV.x,vUV.y);
+         Vec3f gl_FragCoord(vPos.x,vPos.y,vPos.z);
+        if(produceOrRender){
+            if (std::abs(zbuffer[int(gl_FragCoord.x+gl_FragCoord.y*width)]-gl_FragCoord.z)<1e-2) {
+                occl->set(uv.x*occl->width, uv.y*occl->height, TGAColor(255));
+        }
+        color = TGAColor(255, 0, 0);
+        }else{
+
+            int t = occl->get(uv.x*occl->width, uv.y*occl->height)[0];
+              color = TGAColor(t, t, t);
+           return false;
+        }
+        return false;
+                    
+    }
+};
  #endif
