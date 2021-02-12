@@ -43,7 +43,7 @@ const int height = ny;
 const int depth  = 255;
  
 const Vec3f light_dir = Vec3f(1,1,0).normalize();
- Vec3f camera(1,1,4);
+ Vec3f camera(1.2,2.0,3);
  Vec3f lookAtPos(0,0,0);
  Vec3f up(0,1,0);
  std::shared_ptr<TGAImage> color_map{new TGAImage()};
@@ -112,7 +112,7 @@ void drawModelFilled(Model* model,TGAImage &image,std::vector<double>& zbuffer,g
 
 void drawModelFilledWithShadow(Model* model,TGAImage &image,std::vector<double>& zbuffer,gl_enviroment& envir){
        //shadow pass
-        TGAImage depthForShaow(width, height, TGAImage::RGB);
+        TGAImage depthForShadow(width, height, TGAImage::RGB);
         gl_enviroment shadow_pass_envir(width,height,depth);
         shadow_pass_envir.setLookat(light_dir, lookAtPos, up);
         shadow_pass_envir.setViewport(width/8, height/8, width*3/4, height*3/4,depth);
@@ -128,15 +128,15 @@ void drawModelFilledWithShadow(Model* model,TGAImage &image,std::vector<double>&
             for (int j=0; j<3; j++) {
                 screen_coords[j] = depthshader.vertex(i, j,shadow_pass_envir);
             }
-            triangle(screen_coords, depthshader, depthForShaow,zbuffer, shadow_pass_envir);
+            triangle(screen_coords, depthshader, depthForShadow,zbuffer, shadow_pass_envir);
         }
      
-       // depthForShaow.flip_vertically(); // to place the origin in the bottom left corner of the image
-        depthForShaow.write_tga_file("depth.tga");
+       // depthForShadow.flip_vertically(); // to place the origin in the bottom left corner of the image
+        depthForShadow.write_tga_file("depth.tga");
        
        clear_zbuffer(zbuffer);
-       image=depthForShaow;
-       return;
+   /*     image=depthForShadow;
+       return; */
        
        
        
@@ -152,7 +152,7 @@ void drawModelFilledWithShadow(Model* model,TGAImage &image,std::vector<double>&
        auto mat_shadow=mat_world_to_shdaow_map*glm::inverse(mat_world_to_viewport);
         // #pragma omp parallel for
     for (int i=0; i<model->nfaces(); i++) { 
-  PhongShader_1 shader(envir,true,mat_shadow,&depthForShaow);
+  PhongShader_1 shader(envir,true,mat_shadow,&depthForShadow);
     glm::vec4 screen_coords[3]; 
     Vec3f world_coords[3]; 
     Vec2f uv[3];
@@ -180,7 +180,7 @@ int main(int argc, char **argv) {
     if (2==argc) {
         model = new Model(argv[1]);
     } else {
-        model = new Model("./model/african_head/african_head.obj");
+        model = new Model("./model/floor/floor.obj");
     } 
  
      initShaderEnvir(model,light_dir);

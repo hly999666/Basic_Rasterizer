@@ -5,9 +5,11 @@
 #ifndef GEOMETRY_H
 #include "geometry.h"
 #endif
-#ifndef GLM_FORCE_SWIZZLE
-#define GLM_FORCE_SWIZZLE
+#ifndef MY_MATH_HELPER_H
+#include "my_math_helper.hpp"
 #endif
+ 
+
 #include <glm/glm.hpp>
 #include <glm/mat4x4.hpp> 
 #include <glm/gtc/matrix_transform.hpp>
@@ -21,11 +23,25 @@ class gl_enviroment{
       glm::mat4 View;
       glm::mat4 Viewport;
       glm::mat4 Projection;
+      glm::vec3 eye;
+      glm::vec3 center;
+      glm::vec3 up;
+      glm::ivec2 zbuffer_resolution;
       int width;
       int height;
       int depth;
 public:
-     gl_enviroment(int w,int h,int d){
+     gl_enviroment(int w,int h,int d,
+     Vec3f e=Vec3f(1,1,4),
+     Vec3f c=Vec3f(0,0,0),
+     Vec3f u=Vec3f(0,1,0),
+     glm::ivec2 z_res=glm::ivec2(1024,1024)
+     )
+     {
+       eye=glm_vec3(e);
+       center=glm_vec3(c);
+        up=glm_vec3(u);
+        zbuffer_resolution=z_res;
       width=w;height=h;depth=d;
   }
    void setViewport(int x, int y, int w, int h,int d){
@@ -34,8 +50,11 @@ public:
    void setProjection(float coeff){
      Projection=projection(coeff);
    };
-   void setLookat(Vec3f eye, Vec3f center, Vec3f up){
-    View=lookat(eye,center,up);
+   void setLookat(Vec3f _eye, Vec3f _center, Vec3f _up){
+    View=lookat(_eye,_center,_up);
+    eye=glm_vec3(_eye);
+    center=glm_vec3(_center);
+    up=glm_vec3(_up);
    };
 };
 struct IShader {

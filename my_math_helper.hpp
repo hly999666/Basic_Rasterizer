@@ -7,6 +7,9 @@
 #ifndef __GEOMETRY_A_H__
 #include "geometry_a.h"
 #endif
+#ifndef M_PI
+#define M_PI 3.1415926535898
+#endif
 inline glm::vec3 col(const glm::mat3& mat,int i){
     return glm::vec3(mat[0][i],mat[1][i],mat[2][i]);
 }
@@ -45,5 +48,12 @@ inline glm::vec3 projectV4toV3(const glm::vec4& v ){
 }
 inline void clear_zbuffer(std::vector<double>&zbuffer){
        for(auto& val:zbuffer)val=-8192.0;
+}
+inline glm::vec3 samplingOverSphere(){
+     float u = (float)rand()/(float)RAND_MAX;
+    float v = (float)rand()/(float)RAND_MAX;
+    float theta = 2.f*M_PI*u;
+    float phi   = acos(2.f*v - 1.f);
+    return glm::vec3(sin(phi)*cos(theta), sin(phi)*sin(theta), cos(phi));
 }
 #endif

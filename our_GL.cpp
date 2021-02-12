@@ -55,10 +55,13 @@ void triangle(glm::vec4 *_pts4,IShader& shader,TGAImage &image,std::vector<doubl
     int width=envir.width;
     int height=envir.height;
    Vec3f pts[3];
+   glm::vec3 ws;
    for(int i=0;i<3;i++){
+       
        pts[i][0]=_pts4[i][0]/_pts4[i][3];
        pts[i][1]=_pts4[i][1]/_pts4[i][3];
        pts[i][2]=_pts4[i][2]/_pts4[i][3];      
+       ws[i]=1.0f/_pts4[i][3];
    }
    
     Vec2i bboxmin(image.get_width()-1,  image.get_height()-1); 
@@ -76,10 +79,16 @@ void triangle(glm::vec4 *_pts4,IShader& shader,TGAImage &image,std::vector<doubl
     for (P.x=bboxmin.x; P.x<=bboxmax.x; P.x++) { 
         for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) { 
             Vec3f bc_screen  = barycentric(_pts, Vec2i(P.x,P.y)); 
+            //perspective  correct linear interpolation
+
             if (bc_screen.x<0 || bc_screen.y<0 || bc_screen.z<0) continue; 
               z = 0.0;
-            //compute z
-            vec2 uv;uv.x=0.0;uv.y=0.0;
+            bc_screen.x*=ws.x;
+            bc_screen.y*=ws.y;
+            bc_screen.z*=ws.z;
+            double sum=  bc_screen.x+  bc_screen.y+  bc_screen.z;
+            double factor_p=1.0/sum;
+            bc_screen=bc_screen*factor_p;
             double intensity_interpolated=0;
             for (int i=0; i<3; i++){
                 z+=(double)pts[i][2]*(double)bc_screen[i];
@@ -91,18 +100,12 @@ void triangle(glm::vec4 *_pts4,IShader& shader,TGAImage &image,std::vector<doubl
               if (P.x>=width||P.y>=height||P.x<0||P.y<0) continue;
               if (zbuffer[int(P.x+P.y*width)]<z) {
                
-                 
-        /*         auto tex_color=color_map->get(uv.x,uv.y);
-                double factor=1.0;
-                factor=((double)color.bgra[0]/255.0);
-                auto filled_color=tex_color*factor; */
+        
                  TGAColor color;
                bool discard = shader.fragment(bc_screen, color);
                if (!discard) {
                    zbuffer[int(P.x+P.y*width)]=z;
                   image.set(P.x, P.y, color);
-               }else{
-                   int a=666;
                }
                 //image.set(P.x, P.y,TGAColor(255*intensity_interpolated,255*intensity_interpolated,255*intensity_interpolated,255));
             } 

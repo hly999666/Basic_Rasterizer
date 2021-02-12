@@ -6,7 +6,7 @@
 #include "tgaimage.h"
 #endif
 #ifndef MODEL_H
-#include "cur_model.h"
+#include "model.h"
 #endif
 #ifndef GEOMETRY_H
 #include "geometry.h"
@@ -282,8 +282,8 @@ class ZShader : public IShader {
  
  
         Vec2f uv(vUV.x,vUV.y);
-         Vec3f gl_FragCoord(vPos.x,vPos.y,vPos.z);
-          color = TGAColor(255, 255, 255)*((gl_FragCoord.z+1.f)/2.f);
+        Vec3f gl_FragCoord(vPos.x,vPos.y,vPos.z);
+        color = TGAColor(255, 255, 255)*((gl_FragCoord.z+1.f)/2.f);
         return false;
                  
     }
@@ -338,13 +338,13 @@ class AOShader : public IShader {
         Vec2f uv(vUV.x,vUV.y);
          Vec3f gl_FragCoord(vPos.x,vPos.y,vPos.z);
         if(produceOrRender){
-            if (std::abs(zbuffer[int(gl_FragCoord.x+gl_FragCoord.y*width)]-gl_FragCoord.z)<1e-2) {
+            if (std::abs(zbuffer[int(gl_FragCoord.x+gl_FragCoord.y*_envir.zbuffer_resolution.x)]-gl_FragCoord.z)<1e-2) {
                 occl->set(uv.x*occl->width, uv.y*occl->height, TGAColor(255));
         }
         color = TGAColor(255, 0, 0);
         }else{
 
-            int t = occl->get(uv.x*occl->width, uv.y*occl->height)[0];
+             int t = occl->get(uv.x*occl->width, uv.y*occl->height)[0];
               color = TGAColor(t, t, t);
            return false;
         }
