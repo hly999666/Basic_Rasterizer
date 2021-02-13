@@ -35,6 +35,9 @@
 #ifndef SHADER_H
 #include "Shader.hpp"
 #endif
+#ifndef  RENDERER_H
+#include "Renderer.hpp"
+#endif
 Model *model = nullptr;
 const int nx  = 512;
 const int ny = 512;
@@ -180,7 +183,7 @@ int main(int argc, char **argv) {
     if (2==argc) {
         model = new Model(argv[1]);
     } else {
-        model = new Model("./model/floor/floor.obj");
+        model = new Model("./model/diablo3/diablo3_pose.obj");
     } 
  
      initShaderEnvir(model,light_dir);
@@ -188,12 +191,13 @@ int main(int argc, char **argv) {
      color_map->flip_vertically(); */
       TGAImage image_1(ny, nx, TGAImage::RGB);
        std::vector<double>  zbuffer;zbuffer.resize(width*height);
-      for(double&i:zbuffer)i=-8196.0;
+      clear_zbuffer(zbuffer);
       gl_enviroment envir(width,height,depth);
 
-     drawModelFilledWithShadow(model,image_1,zbuffer,envir);
+     AORenderer renderer(model,envir);
+    renderer.renderAOMap(1024,image_1);
 
- 
+     image_1.write_tga_file("ao.tga");
 
    //image_1.flip_vertically();
   /* std::vector<vec3> framebuffer;

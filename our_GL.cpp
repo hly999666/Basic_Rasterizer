@@ -5,9 +5,11 @@
 #ifndef GEOMETRY_H
 #include "geometry.h"
 #endif
- 
+ #include <cmath>
+#include <limits>
+#include <cstdlib>
 #include <vector>
-
+float nu=1e-2;
 Vec3f barycentric(Vec2i *pts, Vec2i P) { 
     Vec3f v1(pts[2][0]-pts[0][0], pts[1][0]-pts[0][0], pts[0][0]-P[0]);
     Vec3f v2(pts[2][1]-pts[0][1], pts[1][1]-pts[0][1], pts[0][1]-P[1]);
@@ -18,6 +20,18 @@ Vec3f barycentric(Vec2i *pts, Vec2i P) {
     if (std::abs(u[2])<1) return Vec3f(-1,1,1);
     return Vec3f(1.0f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z); 
 } 
+Vec3f barycentric(Vec2f A, Vec2f B, Vec2f C, Vec2f P) {
+    Vec3f s[2];
+    for (int i=2; i--; ) {
+        s[i][0] = C[i]-A[i];
+        s[i][1] = B[i]-A[i];
+        s[i][2] = A[i]-P[i];
+    }
+    Vec3f u = _cross(s[0], s[1]);
+    if (std::abs(u[2])>1e-2)  
+        return Vec3f(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z);
+    return Vec3f(-1,1,1); 
+}
   void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color) { 
     bool steep = false; 
     if (std::abs(x0-x1)<std::abs(y0-y1)) { 
@@ -64,52 +78,56 @@ void triangle(glm::vec4 *_pts4,IShader& shader,TGAImage &image,std::vector<doubl
        ws[i]=1.0f/_pts4[i][3];
    }
    
-    Vec2i bboxmin(image.get_width()-1,  image.get_height()-1); 
-    Vec2i bboxmax(0, 0); 
-    Vec2i clamp(image.get_width()-1, image.get_height()-1); 
+    Vec2f bboxmin( std::numeric_limits<float>::max(),  std::numeric_limits<float>::max());
+    Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
+    Vec2f clamp(image.get_width()-1, image.get_height()-1);
     for (int i=0; i<3; i++) { 
         for (int j=0; j<2; j++) { 
-            bboxmin[j] = std::max(0, std::min(bboxmin[j],(int) pts[i][j])); 
-            bboxmax[j] = std::min(clamp[j], std::max(bboxmax[j],(int) pts[i][j])); 
+            bboxmin[j] = std::max(0.f, std::min(bboxmin[j],  pts[i][j])); 
+            bboxmax[j] = std::min(clamp[j], std::max(bboxmax[j],pts[i][j])); 
         } 
     } 
-    Vec2i _pts[3];
-    for (int i=0; i<3; i++)_pts[i]=Vec2i(pts[i][0],pts[i][1]);
+    Vec2i _ptsI[3];
+    Vec2f _ptsf[3];
+    for (int i=0; i<3; i++){
+        _ptsf[i]=Vec2f(pts[i][0],pts[i][1]);
+        _ptsf[i]=Vec2f(pts[i][0],pts[i][1]);
+    }
     Vec2i P; double z=0.0;
     for (P.x=bboxmin.x; P.x<=bboxmax.x; P.x++) { 
         for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) { 
-            Vec3f bc_screen  = barycentric(_pts, Vec2i(P.x,P.y)); 
+            if (P.x>=width||P.y>=height||P.x<0||P.y<0) continue;
+            Vec3f bc_screen  = barycentric(_ptsf[0], _ptsf[1],_ptsf[2],Vec2f(P.x,P.y)); 
             //perspective  correct linear interpolation
 
-            if (bc_screen.x<0 || bc_screen.y<0 || bc_screen.z<0) continue; 
-              z = 0.0;
-            bc_screen.x*=ws.x;
-            bc_screen.y*=ws.y;
-            bc_screen.z*=ws.z;
-            double sum=  bc_screen.x+  bc_screen.y+  bc_screen.z;
+            if (bc_screen.x<0.0|| bc_screen.y<0.0|| bc_screen.z<0.0) continue; 
+           
+           auto bc_clip=bc_screen;
+            bc_clip.x*=ws.x;
+            bc_clip.y*=ws.y;
+            bc_clip.z*=ws.z;
+            double sum=  bc_clip.x+  bc_clip.y+  bc_clip.z;
             double factor_p=1.0/sum;
-            bc_screen=bc_screen*factor_p;
-            double intensity_interpolated=0;
-            for (int i=0; i<3; i++){
-                z+=(double)pts[i][2]*(double)bc_screen[i];
-            /*     uv.x+=(double)_uv[i][0]*(double)bc_screen[i];
-                uv.y+=(double)_uv[i][1]*(double)bc_screen[i];
-                intensity_interpolated+=(double)v_intensity[i]*(double)bc_screen[i]; */
-            }
-            intensity_interpolated=std::max(0.0,(double)intensity_interpolated);
-              if (P.x>=width||P.y>=height||P.x<0||P.y<0) continue;
+            bc_clip=bc_screen*factor_p;
+            
+           
+         /*    Vec3f bc_clip    = Vec3f(bc_screen.x/_pts4[0][3], bc_screen.y/_pts4[1][3], bc_screen.z/_pts4[2][3]);
+            bc_clip = bc_clip*(1.0/(bc_clip.x+bc_clip.y+bc_clip.z)); */
+             
+            z = 0.0;
+            for (int i=0; i<3; i++)z+=(double)pts[i][2]*(double)bc_clip[i];
+                
+         
+     
               if (zbuffer[int(P.x+P.y*width)]<z) {
-               
-        
-                 TGAColor color;
-               bool discard = shader.fragment(bc_screen, color);
+                TGAColor color;
+                shader.gl_FragCoord=Vec3f((float)P.x,(float)P.y,(float)z);
+               bool discard = shader.fragment(bc_clip, color);
                if (!discard) {
                    zbuffer[int(P.x+P.y*width)]=z;
                   image.set(P.x, P.y, color);
                }
-                //image.set(P.x, P.y,TGAColor(255*intensity_interpolated,255*intensity_interpolated,255*intensity_interpolated,255));
-            } 
-              //image.set(P.x, P.y, color);
         } 
     } 
 } 
+}

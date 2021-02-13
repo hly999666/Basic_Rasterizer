@@ -10,6 +10,8 @@
 #ifndef M_PI
 #define M_PI 3.1415926535898
 #endif
+ 
+#include <limits>
 inline glm::vec3 col(const glm::mat3& mat,int i){
     return glm::vec3(mat[0][i],mat[1][i],mat[2][i]);
 }
@@ -34,6 +36,9 @@ inline glm::vec3 glm_vec3(const Vec3f& v ){
 inline vec<3> vec_3 (const glm::vec3& v ){
     return vec<3> (v.x,v.y,v.z);
 }
+inline Vec3f Vec_3f (const glm::vec3& v ){
+    return Vec3f (v.x,v.y,v.z);
+}
 inline glm::mat3 glm_mat3 (const mat<3,3>& m ){
     glm::mat3 ans;
     for(int i=0;i<3;i++){
@@ -47,7 +52,7 @@ inline glm::vec3 projectV4toV3(const glm::vec4& v ){
     return glm::vec3(v.x/v[3],v.y/v[3],v.z/v[3]);
 }
 inline void clear_zbuffer(std::vector<double>&zbuffer){
-       for(auto& val:zbuffer)val=-8192.0;
+       for(auto& val:zbuffer)val= -std::numeric_limits<float>::max();
 }
 inline glm::vec3 samplingOverSphere(){
      float u = (float)rand()/(float)RAND_MAX;

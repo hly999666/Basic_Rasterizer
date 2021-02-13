@@ -58,7 +58,7 @@ struct TGAColor {
 class TGAImage {
 protected:
    
-
+   int set_count{0};
     bool   load_rle_data(std::ifstream &in);
     bool unload_rle_data(std::ofstream &out) const;
 public:

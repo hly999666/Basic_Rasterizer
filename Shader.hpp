@@ -244,7 +244,8 @@ class ZShader : public IShader {
     public:
     const gl_enviroment& _envir;
     glm::mat3 varying_uv; 
-    glm::mat3 ndc_tri;         
+    glm::mat3 ndc_tri; 
+    glm::mat3 clip_space_coord;                 
     glm::mat4 Projection;
     glm::mat4 View; 
     glm::mat4 uniform_M;
@@ -282,12 +283,13 @@ class ZShader : public IShader {
  
  
         Vec2f uv(vUV.x,vUV.y);
-        Vec3f gl_FragCoord(vPos.x,vPos.y,vPos.z);
-        color = TGAColor(255, 255, 255)*((gl_FragCoord.z+1.f)/2.f);
+  
+        color = TGAColor(255, 255, 255)*((gl_FragCoord.z/_envir.depth+1.f)/2.f);
         return false;
                  
     }
 };
+  int sample_count=0;
 class AOShader : public IShader {
     public:
     const gl_enviroment& _envir;
@@ -296,15 +298,16 @@ class AOShader : public IShader {
     glm::mat4 Projection;
     glm::mat4 uniform_M;
     glm::mat4 View;
-    const double* zbuffer{nullptr};
+  
+    const std::vector<double>* _zbuffer{nullptr};
     TGAImage* occl{nullptr};
     //true compute ao,false render with ao
     bool produceOrRender{false};
-    AOShader(const gl_enviroment& envir,const double* _zbuffer,TGAImage* _occl=nullptr,bool mode_flag=false):
+    AOShader(const gl_enviroment& envir,const std::vector<double>* zbuffer,TGAImage* _occl=nullptr,bool mode_flag=false):
     _envir(envir),
     Projection(envir.Projection),
     View(envir.View),
-    zbuffer(_zbuffer),
+    _zbuffer(zbuffer),
     occl{_occl},
     produceOrRender{mode_flag}
     {
@@ -329,24 +332,30 @@ class AOShader : public IShader {
     virtual bool fragment(Vec3f bar, TGAColor &color) {
         
         glm::vec3 _bar(bar.x,bar.y,bar.z);
-        
+         int zero_count=0;
+          for(int i=0;i<3;i++)zero_count+=(_bar[i]==0);
+        const auto& zbuffer=*_zbuffer;
 
         glm::vec3 vUV= glm::transpose(varying_uv)*_bar;
         glm::vec3 vPos=glm::transpose(ndc_tri)*_bar;
  
  
         Vec2f uv(vUV.x,vUV.y);
-         Vec3f gl_FragCoord(vPos.x,vPos.y,vPos.z);
+      
         if(produceOrRender){
-            if (std::abs(zbuffer[int(gl_FragCoord.x+gl_FragCoord.y*_envir.zbuffer_resolution.x)]-gl_FragCoord.z)<1e-2) {
-                occl->set(uv.x*occl->width, uv.y*occl->height, TGAColor(255));
+            auto flag =zbuffer[int(gl_FragCoord.x+gl_FragCoord.y*_envir.zbuffer_resolution.x)]-gl_FragCoord.z<1e-2;
+            if (flag) {
+             
+               occl->set(uv.x*occl->width, uv.y*occl->height, TGAColor(255));
+                color = TGAColor(255, 0, 0);
         }
-        color = TGAColor(255, 0, 0);
+              /*  Vec2i tex_uv(uv.x*occl->width, uv.y*occl->height);
+                occl->set(tex_uv.x,tex_uv.y, TGAColor(255,255,255));
+                sample_count++;
+                color = TGAColor(255, 0, 0); */
         }else{
-
              int t = occl->get(uv.x*occl->width, uv.y*occl->height)[0];
               color = TGAColor(t, t, t);
-           return false;
         }
         return false;
                     

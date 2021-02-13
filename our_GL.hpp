@@ -27,6 +27,7 @@ class gl_enviroment{
       glm::vec3 center;
       glm::vec3 up;
       glm::ivec2 zbuffer_resolution;
+      bool enableZTest{true};
       int width;
       int height;
       int depth;
@@ -57,7 +58,9 @@ public:
     up=glm_vec3(_up);
    };
 };
-struct IShader {
+class  IShader {
+     public:
+     Vec3f gl_FragCoord;
     virtual ~IShader()=default;
     virtual glm::vec4 vertex(int iface, int nthvert,const gl_enviroment&) = 0;
     virtual bool fragment(Vec3f bar, TGAColor &color) = 0;
