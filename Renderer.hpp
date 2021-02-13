@@ -37,7 +37,7 @@ class AORenderer{
     AORenderer(Model*_m,const gl_enviroment&  e):model(_m),envir(e){};
     void renderAOMap(const int sample,TGAImage& result){
         auto clock=std::chrono::high_resolution_clock::now().time_since_epoch().count();
-        srand(clock);
+             srand(clock);
              glm::ivec2 ao_res(envir.width,envir.height);
  
             glm::ivec2 zbuffer_res(envir.width,envir.height);
@@ -59,7 +59,7 @@ class AORenderer{
                    cur_envir.setViewport(envir.width/8, envir.height/8, envir.width*3/4, envir.height*3/4,envir.depth);
                    cur_envir.setProjection(0.0);
                      TGAImage z_map(envir.width, envir.height, TGAImage::RGB);
-                  #pragma omp parallel for
+              #pragma omp parallel for
                 for (int i=0; i<model->nfaces(); i++) {
                       ZShader shader(cur_envir);
                      glm::vec4 screen_coords[3];
@@ -93,8 +93,22 @@ class AORenderer{
  
                    result=total;
     }
-    void renderModelWithAO(TGAImage& result){
-
+    void renderModelWithAO( TGAImage& ao_map,TGAImage& result){
+                     
+            glm::ivec2 zbuffer_res(envir.width,envir.height);
+            std::vector<double>zbuffer_1;
+            zbuffer_1.resize(zbuffer_res.x*zbuffer_res.y);
+             
+            #pragma omp parallel for
+                for (int i=0; i<model->nfaces(); i++) {
+                    AOShader shader(envir,&zbuffer_1,&ao_map,false);
+                     glm::vec4 screen_coords[3];
+                         for (int j=0; j<3; j++) {
+                                 screen_coords[j] = shader.vertex(i, j,envir);
+                             }
+                          triangle(screen_coords, shader, result,zbuffer_1, envir);
+                   }
+             
     }
 };
 #endif

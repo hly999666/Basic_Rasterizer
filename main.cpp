@@ -45,8 +45,8 @@ const int width  = nx;
 const int height = ny;
 const int depth  = 255;
  
-const Vec3f light_dir = Vec3f(1,1,0).normalize();
- Vec3f camera(1.2,2.0,3);
+const Vec3f light_dir = Vec3f(1,-1,1).normalize();
+ Vec3f camera(1.2,-.8,3);
  Vec3f lookAtPos(0,0,0);
  Vec3f up(0,1,0);
  std::shared_ptr<TGAImage> color_map{new TGAImage()};
@@ -193,12 +193,16 @@ int main(int argc, char **argv) {
        std::vector<double>  zbuffer;zbuffer.resize(width*height);
       clear_zbuffer(zbuffer);
       gl_enviroment envir(width,height,depth);
+       envir.setLookat(camera, lookAtPos, up);
+       envir.setViewport(width/8, height/8, width*3/4, height*3/4,depth);
+       envir.setProjection((camera-lookAtPos).norm());
 
      AORenderer renderer(model,envir);
-    renderer.renderAOMap(1024,image_1);
-
-     image_1.write_tga_file("ao.tga");
-
+ /*    renderer.renderAOMap(1024,image_1);
+    image_1.write_tga_file("ao.tga"); */
+    TGAImage ao_map;ao_map.read_tga_file("ao.tga");
+     ao_map.flip_vertically();
+     renderer.renderModelWithAO(ao_map,image_1);
    //image_1.flip_vertically();
   /* std::vector<vec3> framebuffer;
       framebuffer.resize(nx*ny);

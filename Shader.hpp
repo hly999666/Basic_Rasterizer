@@ -316,7 +316,7 @@ class AOShader : public IShader {
     }
  
     virtual glm::vec4 vertex(int iface, int nthvert,const gl_enviroment& envir) {
-        //set up UI
+        //set up UV
         auto now_uv=cur_model->uv(iface, nthvert);
         mat3_set_col(varying_uv,nthvert,glm::vec3(now_uv.x,now_uv.y,1.0));
   
@@ -332,8 +332,7 @@ class AOShader : public IShader {
     virtual bool fragment(Vec3f bar, TGAColor &color) {
         
         glm::vec3 _bar(bar.x,bar.y,bar.z);
-         int zero_count=0;
-          for(int i=0;i<3;i++)zero_count+=(_bar[i]==0);
+
         const auto& zbuffer=*_zbuffer;
 
         glm::vec3 vUV= glm::transpose(varying_uv)*_bar;
@@ -345,17 +344,12 @@ class AOShader : public IShader {
         if(produceOrRender){
             auto flag =zbuffer[int(gl_FragCoord.x+gl_FragCoord.y*_envir.zbuffer_resolution.x)]-gl_FragCoord.z<1e-2;
             if (flag) {
-             
-               occl->set(uv.x*occl->width, uv.y*occl->height, TGAColor(255));
+                occl->set(uv.x*occl->width, uv.y*occl->height, TGAColor(255));
                 color = TGAColor(255, 0, 0);
         }
-              /*  Vec2i tex_uv(uv.x*occl->width, uv.y*occl->height);
-                occl->set(tex_uv.x,tex_uv.y, TGAColor(255,255,255));
-                sample_count++;
-                color = TGAColor(255, 0, 0); */
         }else{
              int t = occl->get(uv.x*occl->width, uv.y*occl->height)[0];
-              color = TGAColor(t, t, t);
+             color = TGAColor(t, t, t);
         }
         return false;
                     

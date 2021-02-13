@@ -69,13 +69,11 @@ void triangle(glm::vec4 *_pts4,IShader& shader,TGAImage &image,std::vector<doubl
     int width=envir.width;
     int height=envir.height;
    Vec3f pts[3];
-   glm::vec3 ws;
    for(int i=0;i<3;i++){
        
        pts[i][0]=_pts4[i][0]/_pts4[i][3];
        pts[i][1]=_pts4[i][1]/_pts4[i][3];
-       pts[i][2]=_pts4[i][2]/_pts4[i][3];      
-       ws[i]=1.0f/_pts4[i][3];
+       pts[i][2]=_pts4[i][2]/_pts4[i][3]; 
    }
    
     Vec2f bboxmin( std::numeric_limits<float>::max(),  std::numeric_limits<float>::max());
@@ -98,27 +96,21 @@ void triangle(glm::vec4 *_pts4,IShader& shader,TGAImage &image,std::vector<doubl
         for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) { 
             if (P.x>=width||P.y>=height||P.x<0||P.y<0) continue;
             Vec3f bc_screen  = barycentric(_ptsf[0], _ptsf[1],_ptsf[2],Vec2f(P.x,P.y)); 
-            //perspective  correct linear interpolation
-
+         
             if (bc_screen.x<0.0|| bc_screen.y<0.0|| bc_screen.z<0.0) continue; 
-           
+        //perspective correct linear interpolation  
            auto bc_clip=bc_screen;
-            bc_clip.x*=ws.x;
-            bc_clip.y*=ws.y;
-            bc_clip.z*=ws.z;
+            bc_clip.x/=_pts4[0][3];
+            bc_clip.y/=_pts4[1][3];
+            bc_clip.z/=_pts4[2][3];
             double sum=  bc_clip.x+  bc_clip.y+  bc_clip.z;
             double factor_p=1.0/sum;
-            bc_clip=bc_screen*factor_p;
+            bc_clip=bc_clip*factor_p;
             
            
-         /*    Vec3f bc_clip    = Vec3f(bc_screen.x/_pts4[0][3], bc_screen.y/_pts4[1][3], bc_screen.z/_pts4[2][3]);
-            bc_clip = bc_clip*(1.0/(bc_clip.x+bc_clip.y+bc_clip.z)); */
              
             z = 0.0;
             for (int i=0; i<3; i++)z+=(double)pts[i][2]*(double)bc_clip[i];
-                
-         
-     
               if (zbuffer[int(P.x+P.y*width)]<z) {
                 TGAColor color;
                 shader.gl_FragCoord=Vec3f((float)P.x,(float)P.y,(float)z);
