@@ -244,6 +244,7 @@ class ZShader : public IShader {
     public:
     const gl_enviroment& _envir;
     glm::mat3 varying_uv; 
+
     glm::mat3 ndc_tri; 
     glm::mat3 clip_space_coord;                 
     glm::mat4 Projection;
@@ -266,8 +267,11 @@ class ZShader : public IShader {
   
        //set up  vertex
         auto  gl_Vertex = embed4(cur_model->vert(iface, nthvert));        
-        auto mt = (envir.Viewport*envir.Projection*envir.View) ;
+        auto mt = (envir.Projection*envir.View) ;
+        
         gl_Vertex =mt*gl_Vertex;
+        mat3_set_col(varying_tri,nthvert, projectV4toV3(gl_Vertex));
+        gl_Vertex= envir.Viewport*gl_Vertex;
         mat3_set_col(ndc_tri,nthvert, projectV4toV3(gl_Vertex));
         
        return gl_Vertex;
@@ -345,7 +349,7 @@ class AOShader : public IShader {
             auto flag =zbuffer[int(gl_FragCoord.x+gl_FragCoord.y*_envir.zbuffer_resolution.x)]-gl_FragCoord.z<1e-2;
             if (flag) {
                 occl->set(uv.x*occl->width, uv.y*occl->height, TGAColor(255));
-                color = TGAColor(255, 0, 0);
+                color = TGAColor(255,0,0);
         }
         }else{
              int t = occl->get(uv.x*occl->width, uv.y*occl->height)[0];

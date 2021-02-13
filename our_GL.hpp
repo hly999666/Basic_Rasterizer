@@ -61,6 +61,8 @@ public:
 class  IShader {
      public:
      Vec3f gl_FragCoord;
+     glm::mat3 varying_tri;
+     bool hasVarying_tri{false};
     virtual ~IShader()=default;
     virtual glm::vec4 vertex(int iface, int nthvert,const gl_enviroment&) = 0;
     virtual bool fragment(Vec3f bar, TGAColor &color) = 0;

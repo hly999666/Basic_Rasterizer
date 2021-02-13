@@ -39,8 +39,8 @@
 #include "Renderer.hpp"
 #endif
 Model *model = nullptr;
-const int nx  = 512;
-const int ny = 512;
+const int nx  = 800;
+const int ny = 800;
 const int width  = nx;
 const int height = ny;
 const int depth  = 255;
@@ -183,7 +183,7 @@ int main(int argc, char **argv) {
     if (2==argc) {
         model = new Model(argv[1]);
     } else {
-        model = new Model("./model/diablo3/diablo3_pose.obj");
+        model = new Model("./model/african_head/african_head.obj");
     } 
  
      initShaderEnvir(model,light_dir);
@@ -197,17 +197,20 @@ int main(int argc, char **argv) {
        envir.setViewport(width/8, height/8, width*3/4, height*3/4,depth);
        envir.setProjection((camera-lookAtPos).norm());
 
-     AORenderer renderer(model,envir);
+    /*  AORenderer renderer(model,envir); */
  /*    renderer.renderAOMap(1024,image_1);
     image_1.write_tga_file("ao.tga"); */
-    TGAImage ao_map;ao_map.read_tga_file("ao.tga");
+ /*    TGAImage ao_map;ao_map.read_tga_file("ao.tga");
      ao_map.flip_vertically();
-     renderer.renderModelWithAO(ao_map,image_1);
+     renderer.renderModelWithAO(ao_map,image_1); */
    //image_1.flip_vertically();
   /* std::vector<vec3> framebuffer;
       framebuffer.resize(nx*ny);
       test_output(framebuffer); */
 
+SSAORenderer ssao(model,envir);
+ssao.render(image_1);
+//output image
     int key = 0;
     int pixel_d=1;
     cv::Mat image(nx, ny, CV_8UC3,image_1.data.data());

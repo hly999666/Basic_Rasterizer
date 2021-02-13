@@ -65,7 +65,13 @@ inline void  line(Vec2i v0,Vec2i v1,TGAImage &image, TGAColor color){
     line(v0.x,v0.y,v1.x,v1.y,image,color);
 }
 
-void triangle(glm::vec4 *_pts4,IShader& shader,TGAImage &image,std::vector<double>& zbuffer, const gl_enviroment& envir) { 
+void triangle(
+    glm::vec4 *_pts4,
+    IShader& shader,
+    TGAImage &image,
+    std::vector<double>& zbuffer,
+     const gl_enviroment& envir
+     ) { 
     int width=envir.width;
     int height=envir.height;
    Vec3f pts[3];
@@ -91,7 +97,8 @@ void triangle(glm::vec4 *_pts4,IShader& shader,TGAImage &image,std::vector<doubl
         _ptsf[i]=Vec2f(pts[i][0],pts[i][1]);
         _ptsf[i]=Vec2f(pts[i][0],pts[i][1]);
     }
-    Vec2i P; double z=0.0;
+    Vec2i P; 
+    double z=0.0;
     for (P.x=bboxmin.x; P.x<=bboxmax.x; P.x++) { 
         for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) { 
             if (P.x>=width||P.y>=height||P.x<0||P.y<0) continue;
@@ -110,7 +117,13 @@ void triangle(glm::vec4 *_pts4,IShader& shader,TGAImage &image,std::vector<doubl
            
              
             z = 0.0;
-            for (int i=0; i<3; i++)z+=(double)pts[i][2]*(double)bc_clip[i];
+            for (int i=0; i<3; i++){
+                if(shader.hasVarying_tri){
+                    z+=(double)shader.varying_tri[2][i]*(double)bc_clip[i];
+                }else{
+                    z+=(double)pts[i][2]*(double)bc_clip[i];
+                }
+            }
               if (zbuffer[int(P.x+P.y*width)]<z) {
                 TGAColor color;
                 shader.gl_FragCoord=Vec3f((float)P.x,(float)P.y,(float)z);

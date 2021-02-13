@@ -61,4 +61,7 @@ inline glm::vec3 samplingOverSphere(){
     float phi   = acos(2.f*v - 1.f);
     return glm::vec3(sin(phi)*cos(theta), sin(phi)*sin(theta), cos(phi));
 }
+
+
+
 #endif
